@@ -1,0 +1,477 @@
+{% extends "admin/base.html" %}
+
+{% block title %} YunManGongFangAI | 控制台 {% endblock %}
+
+{% comment %} 引入 FontAwesome 图标库，配合你提供的风格 {% endcomment %}
+{% block extrahead %}
+    {{ block.super }}
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block branding %}
+    <div class="admin-logo">
+        <i class="fa-solid fa-robot"></i>
+        <span>YunManGongFangAI</span>
+    </div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block extrastyle %}
+    <style>
+        /* ====================
+           1. 核心变量 (提取自你的参考代码)
+           ==================== */
+        :root {
+            --primary-color: #8b5cf6;
+            --secondary-color: #3b82f6;
+            --bg-color: #050505;
+            --text-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --card-radius: 16px;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* ====================
+           2. 全局重置与背景
+           ==================== */
+        body {
+            background-color: var(--bg-color) !important;
+            color: var(--text-color) !important;
+            font-family: var(--font-main) !important;
+            margin: 0;
+        }
+
+        /* 粒子画布定位 */
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none; /* 让鼠标事件穿透画布 */
+        }
+
+        /* 去除Django默认的白色背景块 */
+        #container, #content, #content-main, .module, .form-row {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        /* 链接颜色 */
+        a:link, a:visited {
+            color: var(--secondary-color) !important;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        a:hover {
+            color: var(--primary-color) !important;
+        }
+
+        /* ====================
+           3. 顶栏样式 (Header)
+           ==================== */
+        #header {
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(20px) !important;
+            border-bottom: 1px solid var(--glass-border) !important;
+            padding: 15px 30px !important;
+            height: auto !important;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            overflow: visible !important;
+        }
+
+        /* 品牌 Logo 区域 */
+        #branding h1 {
+            margin: 0;
+            font-size: 0; /* 隐藏原文本 */
+        }
+        .admin-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .admin-logo i {
+            font-size: 24px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .admin-logo span {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+
+        /* 顶栏右侧的用户工具 */
+        #user-tools {
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+        #user-tools strong {
+            color: #fff;
+        }
+
+        /* ====================
+           4. 面包屑导航
+           ==================== */
+        div.breadcrumbs {
+            background: transparent !important;
+            color: rgba(255, 255, 255, 0.5) !important;
+            padding: 15px 30px !important;
+            border-bottom: 1px solid var(--glass-border);
+            font-size: 14px;
+        }
+        div.breadcrumbs a {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
+        div.breadcrumbs a:hover {
+            color: var(--primary-color) !important;
+        }
+
+        /* ====================
+           5. 核心内容容器 (Card Style)
+           ==================== */
+        /* 主要内容块变成玻璃卡片 */
+        #content-main {
+            padding: 30px !important;
+        }
+
+        /* 列表页、表单页的外框 */
+        .results, .module, #changelist-form, .object-tools, .app-module {
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid var(--glass-border) !important;
+            border-radius: var(--card-radius) !important;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px !important;
+            overflow: hidden; /* 圆角 */
+        }
+
+        /* 首页 App 模块特殊处理 */
+        .app-module {
+            padding: 20px;
+        }
+        .app-module caption, .app-module h2 {
+            background: transparent !important;
+            color: #fff !important;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        /* 标题栏去除背景色 */
+        .module h2, .module caption {
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: #fff !important;
+            padding: 15px 20px !important;
+        }
+
+        /* ====================
+           6. 表格样式 (完美复刻)
+           ==================== */
+        table {
+            width: 100%;
+            border-collapse: collapse !important;
+            border: none !important;
+        }
+
+        thead th {
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: rgba(255, 255, 255, 0.8) !important;
+            border: none !important;
+            border-bottom: 1px solid var(--glass-border) !important;
+            padding: 15px 20px !important;
+            text-transform: none !important;
+            font-size: 13px !important;
+        }
+
+        /* 排序链接颜色 */
+        thead th a {
+             color: rgba(255, 255, 255, 0.8) !important;
+        }
+
+        tbody td, tbody th {
+            border-bottom: 1px solid var(--glass-border) !important;
+            padding: 15px 20px !important;
+            background: transparent !important;
+            color: rgba(255,255,255,0.9) !important;
+        }
+
+        /* 表格行悬停效果 */
+        tbody tr:hover td, tbody tr:hover th {
+            background: rgba(139, 92, 246, 0.1) !important; /* 紫色微光 */
+        }
+
+        /* 奇偶行背景去除 */
+        .row1, .row2 {
+            background: transparent !important;
+        }
+
+        /* ====================
+           7. 表单与输入框
+           ==================== */
+        label {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-weight: normal !important;
+        }
+
+        /* 输入框样式统一 */
+        input[type=text], input[type=password], input[type=number], input[type=email], input[type=url], textarea, select {
+            background: rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid var(--glass-border) !important;
+            padding: 10px 15px !important;
+            border-radius: 8px !important;
+            color: #fff !important;
+            font-family: var(--font-main);
+            width: auto;
+            min-width: 300px; /* 稍微宽一点 */
+            transition: 0.3s;
+        }
+
+        /* 聚焦效果 */
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--primary-color) !important;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+
+        /* 帮助文本 */
+        .help, p.help {
+            color: rgba(255, 255, 255, 0.5) !important;
+            padding-left: 0 !important;
+        }
+
+        /* 必填项星号 */
+        .required label:after {
+            color: var(--danger-color) !important;
+        }
+
+        /* ====================
+           8. 按钮样式 (渐变色)
+           ==================== */
+        .button, input[type=submit], input[type=button], .submit-row input {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
+            color: white !important;
+            border: none !important;
+            padding: 10px 25px !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+            height: auto !important;
+        }
+
+        .button:hover, input[type=submit]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+        }
+
+        /* 次要按钮 / 删除按钮 */
+        .deletelink {
+            background: rgba(239, 68, 68, 0.1) !important;
+            color: var(--danger-color) !important;
+            border: 1px solid var(--danger-color) !important;
+            padding: 8px 16px !important;
+            border-radius: 8px !important;
+            height: auto !important;
+        }
+        .deletelink:hover {
+            background: var(--danger-color) !important;
+            color: white !important;
+        }
+
+        /* ====================
+           9. 侧边栏过滤器 (Filter Sidebar)
+           ==================== */
+        #changelist-filter {
+            background: var(--glass-bg) !important;
+            border-left: 1px solid var(--glass-border) !important;
+            position: relative !important;
+            top: 0 !important;
+            right: 0 !important;
+            padding: 20px !important;
+            border-radius: 0 var(--card-radius) var(--card-radius) 0;
+        }
+
+        #changelist-filter h2 {
+            background: transparent !important;
+            color: var(--primary-color) !important;
+            padding: 0 0 10px 0 !important;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        #changelist-filter li.selected a {
+            color: var(--primary-color) !important;
+        }
+
+        /* ====================
+           10. 底部与其他细节
+           ==================== */
+        /* 隐藏掉 Django 默认的底部提交行背景 */
+        .submit-row {
+            background: rgba(0,0,0,0.2) !important;
+            border: 1px solid var(--glass-border) !important;
+            border-radius: 12px;
+            box-shadow: none !important;
+            padding: 20px !important;
+        }
+
+        /* 错误提示列表 */
+        .errornote {
+            background: rgba(239, 68, 68, 0.1) !important;
+            border: 1px solid var(--danger-color) !important;
+            color: #ffcccc !important;
+            border-radius: 8px;
+        }
+
+        /* 日期选择器图标修复 */
+        .datetimeshortcuts .icon {
+            filter: invert(1); /* 变成白色 */
+            opacity: 0.7;
+        }
+    </style>
+{% endblock %}
+
+{% block footer %}
+    <!-- 1. 背景画布 -->
+    <canvas id="bgCanvas"></canvas>
+
+    {{ block.super }}
+
+    <!-- 2. 粒子特效脚本 (完全复刻你提供的逻辑) -->
+    <script>
+        (function() {
+            const canvas = document.getElementById('bgCanvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let particles = [];
+            // 鼠标交互距离
+            let mouse = { x: null, y: null, radius: 200 };
+
+            window.addEventListener('mousemove', (event) => {
+                mouse.x = event.x;
+                mouse.y = event.y;
+            });
+
+            window.addEventListener('mouseout', () => {
+                mouse.x = null;
+                mouse.y = null;
+            });
+
+            // 配置项
+            const properties = {
+                particleColor: 'rgba(139, 92, 246, 0.8)', // 紫色
+                particleRadius: 2,
+                particleCount: 100, // 粒子数量
+                particleVelocity: 0.5,
+                lineLength: 150, // 连线距离
+            };
+
+            function initSize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+
+            window.onresize = initSize;
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.velocityX = Math.random() * (properties.particleVelocity * 2) - properties.particleVelocity;
+                    this.velocityY = Math.random() * (properties.particleVelocity * 2) - properties.particleVelocity;
+                    this.size = Math.random() * 2 + 1;
+                }
+
+                position() {
+                    // 边界反弹
+                    if(this.x > width || this.x < 0) this.velocityX *= -1;
+                    if(this.y > height || this.y < 0) this.velocityY *= -1;
+                    this.x += this.velocityX;
+                    this.y += this.velocityY;
+                }
+
+                reDraw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = properties.particleColor;
+                    ctx.fill();
+                }
+            }
+
+            function drawLines() {
+                let x1, y1, x2, y2, length, opacity;
+                for (let i in particles) {
+                    for (let j in particles) {
+                        x1 = particles[i].x; y1 = particles[i].y;
+                        x2 = particles[j].x; y2 = particles[j].y;
+                        length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+                        if (length < properties.lineLength) {
+                            opacity = 1 - length / properties.lineLength;
+                            ctx.lineWidth = 0.5;
+                            // 连线颜色：紫色偏淡
+                            ctx.strokeStyle = `rgba(139, 92, 246, ${opacity})`;
+                            ctx.beginPath();
+                            ctx.moveTo(x1, y1);
+                            ctx.lineTo(x2, y2);
+                            ctx.stroke();
+                        }
+                    }
+
+                    // 鼠标连线
+                    if (mouse.x != null) {
+                        let mouseDist = Math.sqrt(Math.pow(mouse.x - particles[i].x, 2) + Math.pow(mouse.y - particles[i].y, 2));
+                        if (mouseDist < mouse.radius) {
+                            ctx.lineWidth = 1;
+                            // 鼠标连线颜色：蓝色
+                            ctx.strokeStyle = `rgba(59, 130, 246, ${1 - mouseDist/mouse.radius})`;
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(mouse.x, mouse.y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            function loop() {
+                // 清空画布
+                ctx.clearRect(0, 0, width, height);
+
+                // 更新粒子
+                for (let i in particles) {
+                    particles[i].position();
+                    particles[i].reDraw();
+                }
+                drawLines();
+                requestAnimationFrame(loop);
+            }
+
+            function initParticles() {
+                particles = [];
+                let count = window.innerWidth > 1000 ? properties.particleCount : 50;
+                for (let i = 0; i < count; i++) {
+                    particles.push(new Particle());
+                }
+            }
+
+            // 启动
+            initSize();
+            initParticles();
+            loop();
+        })();
+    </script>
+{% endblock %}
