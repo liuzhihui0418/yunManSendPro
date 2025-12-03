@@ -128,3 +128,5 @@ SIMPLEUI_ANALYSIS = False   # 关闭使用分析
 SIMPLEUI_LOGO = 'https://avatars.githubusercontent.com/u/123456?s=200&v=4'  # 可以换成你的Logo链接
 # 设置后台显示的名称
 SIMPLEUI_DEFAULT_THEME = '刘志威的网店后台'
+import os  # 如果文件开头已经有 import os，这行可以不加
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
