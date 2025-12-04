@@ -77,8 +77,11 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     # 重写创建订单逻辑
     def perform_create(self, serializer):
-        # 1. 保存订单
-        order = serializer.save()
+        # 1. 获取前端传来的图片 (product_image)
+        p_image = self.request.data.get('product_image', '')
+
+        # 2. 保存订单 (同时把图片写进去)
+        order = serializer.save(first_image=p_image)
 
         # 2. 获取前端传来的“暗号” (is_from_cart)
         # 注意：request.data 获取的是非模型字段

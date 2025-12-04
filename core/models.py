@@ -54,6 +54,8 @@ class Order(models.Model):
     address = models.TextField(verbose_name="送货地址", default="")
     items_info = models.TextField(verbose_name="购买详情")
     total_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="总金额")
+    # 🟢 新增：存订单第一张商品的图片，用于列表展示
+    first_image = models.CharField(max_length=500, verbose_name="商品图片", blank=True, default="")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="订单状态")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="下单时间")
 
