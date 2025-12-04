@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Product, Order, Category, CartItem
+from .models import Product, Order, Category, CartItem, Address
+
 
 # 1. 分类管理
 @admin.register(Category)
@@ -34,3 +35,10 @@ class OrderAdmin(admin.ModelAdmin):
 class CartItemAdmin(admin.ModelAdmin):
     list_display = ('user', 'product', 'quantity', 'created_at')
     search_fields = ('user__username', 'product__name')
+
+# 5. 收货地址管理 (这是新加的，让你能看到所有人的地址库)
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ('user', 'name', 'phone', 'street', 'is_default')
+    search_fields = ('name', 'phone', 'street')
+    list_filter = ('is_default',)
