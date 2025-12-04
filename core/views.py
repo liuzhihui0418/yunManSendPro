@@ -59,6 +59,22 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all().order_by('-created_at')
     serializer_class = OrderSerializer
 
+    def get_queryset(self):
+        # 1. 获取基础查询集
+        queryset = Order.objects.all().order_by('-created_at')
+
+        # 2. 过滤：只看当前用户的订单
+        username = self.request.query_params.get('username')
+        if username:
+            queryset = queryset.filter(customer_name=username)
+
+        # 3. 过滤：按订单状态筛选
+        status = self.request.query_params.get('status')
+        if status and status != 'all':
+            queryset = queryset.filter(status=status)
+
+        return queryset
+
     # 重写创建订单逻辑
     def perform_create(self, serializer):
         # 1. 保存订单
@@ -75,19 +91,6 @@ class OrderViewSet(viewsets.ModelViewSet):
                 # 通过用户名找到对应的 User，再删 CartItem
                 CartItem.objects.filter(user__username=order.customer_name).delete()
 
-    # 🟢 新增：重写创建逻辑
-    def perform_create(self, serializer):
-        # 1. 先保存订单
-        saved_order = serializer.save()
-
-        # 2. 获取下单的用户名 (前提是你前端传了 customer_name)
-        username = saved_order.customer_name
-
-        # 3. 自动清空该用户的购物车
-        # 逻辑：找到这个用户名对应的所有购物车商品，全部删除
-        if username:
-            print(f"正在清空 {username} 的购物车...")
-            CartItem.objects.filter(user__username=username).delete()
 
 
 class CartViewSet(viewsets.ModelViewSet):
