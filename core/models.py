@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.db import models
 
 class Product(models.Model):
@@ -32,4 +33,21 @@ class Order(models.Model):
 
     class Meta:
         verbose_name = "订单中心"
+        verbose_name_plural = verbose_name
+
+
+# ============================
+# 4. 购物车表 (新增)
+# ============================
+class CartItem(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="用户")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="商品")
+    quantity = models.IntegerField("数量", default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.product.name}"
+
+    class Meta:
+        verbose_name = "购物车"
         verbose_name_plural = verbose_name

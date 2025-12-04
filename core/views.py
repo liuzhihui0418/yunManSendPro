@@ -5,7 +5,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-
+from .models import Product, Order, CartItem
+from .serializers import ProductSerializer, OrderSerializer, CartItemSerializer
 # ============================
 # 1. 注册接口
 # ============================
@@ -60,3 +61,26 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all().order_by('-created_at')
     serializer_class = OrderSerializer
 
+
+class CartViewSet(viewsets.ModelViewSet):
+    serializer_class = CartItemSerializer
+
+    # 只返回当前登录用户的购物车
+    def get_queryset(self):
+        # 如果没登录(比如后台管理)，返回空或者所有
+        if self.request.user.is_anonymous:
+            return CartItem.objects.none()
+        return CartItem.objects.filter(user=self.request.user).order_by('-created_at')
+
+    # 创建时自动填入当前用户
+    def perform_create(self, serializer):
+        # 检查该用户是否已经加购过该商品，如果有，只加数量
+        product = serializer.validated_data['product']
+        user = self.request.user
+        existing_item = CartItem.objects.filter(user=user, product=product).first()
+
+        if existing_item:
+            existing_item.quantity += serializer.validated_data['quantity']
+            existing_item.save()
+        else:
+            serializer.save(user=user)
