@@ -59,6 +59,22 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all().order_by('-created_at')
     serializer_class = OrderSerializer
 
+    # 重写创建订单逻辑
+    def perform_create(self, serializer):
+        # 1. 保存订单
+        order = serializer.save()
+
+        # 2. 获取前端传来的“暗号” (is_from_cart)
+        # 注意：request.data 获取的是非模型字段
+        is_from_cart = self.request.data.get('is_from_cart', False)
+
+        # 3. 如果是购物车订单，并且有用户名，就清空该用户的购物车
+        if is_from_cart is True or str(is_from_cart) == 'true':
+            if order.customer_name:
+                print(f"检测到购物车结算，正在清空 {order.customer_name} 的购物车...")
+                # 通过用户名找到对应的 User，再删 CartItem
+                CartItem.objects.filter(user__username=order.customer_name).delete()
+
     # 🟢 新增：重写创建逻辑
     def perform_create(self, serializer):
         # 1. 先保存订单
