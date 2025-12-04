@@ -16,14 +16,21 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ('name',)
     list_editable = ('stock', 'price', 'is_active')
 
-# 3. 订单管理 (修复了字段名错误)
+
+# 3. 订单管理
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    # ⚠️ 注意这里：把 phone 改成了 customer_phone
-    list_display = ('id', 'customer_name', 'customer_phone', 'items_info', 'total_price', 'status', 'created_at')
+    # 👇 关键修改：我把 'address' 加到了第 4 个位置，这样列表直接显示地址！
+    list_display = (
+    'id', 'customer_name', 'customer_phone', 'address', 'items_info', 'total_price', 'status', 'created_at')
+
+    # 右侧过滤器
     list_filter = ('status', 'created_at')
-    # ⚠️ 这里也改了
+
+    # 搜索框：允许搜名字、电话、地址
     search_fields = ('customer_name', 'customer_phone', 'address')
+
+    # 在列表页直接修改状态（方便你快速点发货）
     list_editable = ('status',)
 
     def status_display(self, obj):
