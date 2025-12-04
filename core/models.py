@@ -80,3 +80,19 @@ class CartItem(models.Model):
     class Meta:
         verbose_name = "购物车"
         verbose_name_plural = verbose_name
+
+
+# 5. 收货地址表
+class Address(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="用户")
+    name = models.CharField("联系人", max_length=50)
+    phone = models.CharField("手机号", max_length=20)
+    street = models.CharField("详细地址", max_length=200)  # 比如：xx省xx市xx街道xx号
+    is_default = models.BooleanField("是否默认", default=False)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.street}"
+
+    class Meta:
+        verbose_name = "收货地址"
+        verbose_name_plural = verbose_name

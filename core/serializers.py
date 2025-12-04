@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Product, Order, Category, CartItem
+from .models import Product, Order, Category, CartItem, Address
+
 
 # ============================
 # 1. 分类序列化器 (之前报错缺这个)
@@ -35,4 +36,10 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartItem
+        fields = '__all__'
+
+# 5. 地址序列化器
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
         fields = '__all__'

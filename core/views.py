@@ -3,8 +3,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-from .models import Product, Order, Category, CartItem
-from .serializers import ProductSerializer, OrderSerializer, CategorySerializer, CartItemSerializer
+from .models import Product, Order, Category, CartItem, Address
+from .serializers import ProductSerializer, OrderSerializer, CategorySerializer, CartItemSerializer, AddressSerializer
 
 
 # ============================
@@ -102,3 +102,26 @@ class CartViewSet(viewsets.ModelViewSet):
         else:
             # 不存在则创建新条目
             return super().create(request, *args, **kwargs)
+
+class AddressViewSet(viewsets.ModelViewSet):
+    serializer_class = AddressSerializer
+
+    # 只查当前登录用户的地址
+    def get_queryset(self):
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            return Address.objects.filter(user_id=user_id).order_by('-is_default', '-id')
+        return Address.objects.none()
+
+    # 创建/修改时，如果设为默认，把其他的默认取消掉
+    def perform_create(self, serializer):
+        if serializer.validated_data.get('is_default'):
+            user = serializer.validated_data['user']
+            Address.objects.filter(user=user).update(is_default=False)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if serializer.validated_data.get('is_default'):
+            user = serializer.instance.user
+            Address.objects.filter(user=user).update(is_default=False)
+        serializer.save()
