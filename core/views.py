@@ -1,12 +1,12 @@
 from rest_framework import viewsets
-from .models import Product, Order
-from .serializers import ProductSerializer, OrderSerializer
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-from .models import Product, Order, CartItem
-from .serializers import ProductSerializer, OrderSerializer, CartItemSerializer
+from .models import Product, Order, Category, CartItem
+from .serializers import ProductSerializer, OrderSerializer, CategorySerializer, CartItemSerializer
+
+
 # ============================
 # 1. 注册接口
 # ============================
@@ -14,19 +14,14 @@ from .serializers import ProductSerializer, OrderSerializer, CartItemSerializer
 def register(request):
     phone = request.data.get('phone')
     password = request.data.get('password')
-
     if not phone or not password:
         return Response({'code': 400, 'msg': '手机号或密码不能为空'})
-
-    # 检查手机号是否已存在
     if User.objects.filter(username=phone).exists():
         return Response({'code': 400, 'msg': '该手机号已注册'})
-
-    # 创建用户 (这里把手机号当做用户名存)
     user = User.objects.create_user(username=phone, password=password)
     user.save()
-
     return Response({'code': 200, 'msg': '注册成功', 'data': {'id': user.id, 'name': phone}})
+
 
 # ============================
 # 2. 登录接口
@@ -35,27 +30,29 @@ def register(request):
 def login_view(request):
     phone = request.data.get('phone')
     password = request.data.get('password')
-
-    # Django 自带的验证方法
     user = authenticate(username=phone, password=password)
-
     if user is not None:
-        # 登录成功，返回用户信息
         return Response({
             'code': 200,
             'msg': '登录成功',
-            'data': {
-                'user_id': user.id,
-                'username': user.username,
-                'token': 'fake-token-' + str(user.id) # 暂时用个假token模拟
-            }
+            'data': {'user_id': user.id, 'username': user.username}
         })
     else:
         return Response({'code': 400, 'msg': '账号或密码错误'})
 
+
+# ============================
+# 3. 业务视图 (分类、商品、订单、购物车)
+# ============================
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all().order_by('sort')
+    serializer_class = CategorySerializer
+
+
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.filter(is_active=True)
     serializer_class = ProductSerializer
+
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all().order_by('-created_at')
@@ -65,22 +62,28 @@ class OrderViewSet(viewsets.ModelViewSet):
 class CartViewSet(viewsets.ModelViewSet):
     serializer_class = CartItemSerializer
 
-    # 只返回当前登录用户的购物车
+    # 1. 查询购物车：允许用 ?user_id=xxx 过滤
     def get_queryset(self):
-        # 如果没登录(比如后台管理)，返回空或者所有
-        if self.request.user.is_anonymous:
-            return CartItem.objects.none()
-        return CartItem.objects.filter(user=self.request.user).order_by('-created_at')
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            return CartItem.objects.filter(user_id=user_id).order_by('-created_at')
+        return CartItem.objects.none()
 
-    # 创建时自动填入当前用户
-    def perform_create(self, serializer):
-        # 检查该用户是否已经加购过该商品，如果有，只加数量
-        product = serializer.validated_data['product']
-        user = self.request.user
-        existing_item = CartItem.objects.filter(user=user, product=product).first()
+    # 2. 加入购物车：自动处理数量叠加
+    def create(self, request, *args, **kwargs):
+        # 获取前端传来的 user 和 product
+        user_id = request.data.get('user')
+        product_id = request.data.get('product')
+        quantity = int(request.data.get('quantity', 1))
+
+        # 检查是否已存在
+        existing_item = CartItem.objects.filter(user_id=user_id, product_id=product_id).first()
 
         if existing_item:
-            existing_item.quantity += serializer.validated_data['quantity']
+            # 存在则增加数量
+            existing_item.quantity += quantity
             existing_item.save()
+            return Response({'status': 'updated', 'id': existing_item.id}, status=200)
         else:
-            serializer.save(user=user)
+            # 不存在则创建新条目
+            return super().create(request, *args, **kwargs)
